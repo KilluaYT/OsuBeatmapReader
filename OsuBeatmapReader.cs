@@ -4,7 +4,7 @@ using System.IO;
 
 namespace OsuBeatmapReader
 {
-    internal class OsuBeatmapReader
+    public class OsuBeatmapReader
     {
         /// <summary>
         /// All Data, as full String
@@ -12,7 +12,8 @@ namespace OsuBeatmapReader
         public string RAW_Data;
 
         public int OsuFileFormat;
-        public string BackgroundFileName;
+        public string BackgroundFileName, BackgroundFilePath, AudioFilePath;
+
 
         /// <summary>
         /// File Read Error Message
@@ -61,6 +62,11 @@ namespace OsuBeatmapReader
         public List<int> Circle_PosY;
         public List<int> Circle_Time;
 
+        public List<int> TimingPoint_Time;
+        public List<decimal> TimingPoint_Bpm;
+        public List<int> InheritedPoint_Time;
+        public List<decimal> InheritedPoint_Multiplier;
+
         // Sliders are not supported yet.
 
         ///<summary>
@@ -68,6 +74,8 @@ namespace OsuBeatmapReader
         ///</summary>
         public void GetBeatmapData(string path)
         {
+            #region ClearListCheck
+   
             if (Circle_PosX == null)
             {
             }
@@ -92,7 +100,39 @@ namespace OsuBeatmapReader
                 Circle_Time.Clear();
             }
 
+            if (TimingPoint_Time == null)
+            {
+            }
+            else
+            {
+                TimingPoint_Time.Clear();
+            }
+
+            if (TimingPoint_Bpm == null)
+            {
+            }
+            else
+            {
+                TimingPoint_Bpm.Clear();
+            }
+            if (InheritedPoint_Time == null)
+            {
+            }
+            else
+            {
+                InheritedPoint_Time.Clear();
+            }
+            if (InheritedPoint_Multiplier == null)
+            {
+            }
+            else
+            {
+                InheritedPoint_Multiplier.Clear();
+            }
+            #endregion
+
             BackgroundFileName = "";
+          
             RAW_Data = "";
             OsuFileFormat = -1;
             AudioFileName = "";
@@ -184,6 +224,7 @@ namespace OsuBeatmapReader
                             {
                                 RAW_Data = RAW_Data + str + Environment.NewLine;
                                 AudioFileName = Convert.ToString(str.Replace("AudioFilename: ", ""));
+                                AudioFilePath = bmpath + "\\" + AudioFileName;
                             }
 
                             if (str.StartsWith("PreviewTime:"))
@@ -296,6 +337,7 @@ namespace OsuBeatmapReader
                                     char checkForFile = '"';
                                     if ((strArray[index].StartsWith("" + checkForFile)) && (strArray[index].EndsWith("" + checkForFile)))
                                     {
+                                        BackgroundFilePath = bmpath + "\\" + strArray[index];
                                         BackgroundFileName = strArray[index];
                                         EventsTag = false;
                                         TimingPointsTag = true;
@@ -306,7 +348,41 @@ namespace OsuBeatmapReader
                         }
                         if (TimingPointsTag)
                         {
-                            // Soon...
+                         
+
+                            string[] strArray = str.Split(',');
+                            for (int index = 0; index < strArray.Length; ++index)
+                            {
+                                string Time="", BeatLength="", Uninherited="";
+                                if (index == 0)
+                                {
+                                   Time = strArray[index];
+                                }
+                                if (index == 1)
+                                {
+                                    BeatLength = strArray[index];
+                                }
+                                if (index == 6)
+                                {
+                                    Uninherited = strArray[index];
+                                }
+
+                                if (Uninherited == "0")
+                                {
+                                    TimingPoint_Time.Add(Convert.ToInt32(Time));
+                                    TimingPoint_Bpm.Add(Convert.ToInt32(((1/Convert.ToDecimal(BeatLength))*1000)*60));
+                                }
+                                else
+                                {
+                                    if(Uninherited == "1")
+                                    {
+                                        InheritedPoint_Time.Add(Convert.ToInt32(Time));
+                                        InheritedPoint_Multiplier.Add(Convert.ToDecimal( 100/Convert.ToDecimal(BeatLength.Replace("-",""))));
+                                    }
+                                }
+
+                            }
+
                         }
 
                         if (HitObjectsTag)
