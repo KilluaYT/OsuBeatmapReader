@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Windows.Forms;
 
 namespace OsuBeatmapReader
 {
@@ -13,7 +14,6 @@ namespace OsuBeatmapReader
 
         public int OsuFileFormat;
         public string BackgroundFileName, BackgroundFilePath, AudioFilePath;
-
 
         /// <summary>
         /// File Read Error Message
@@ -38,13 +38,13 @@ namespace OsuBeatmapReader
         public string TitleUnicode;
         public string Artist;
         public string ArtistUnicde;
-        public string  Creator;
+        public string Creator;
         public string Version;
         public string Source;
         public string Tags;
         public int BeatmapID;
         public int BeatmapSetID;
-       
+
         #endregion Metadata
 
         #region Difficulty
@@ -63,9 +63,9 @@ namespace OsuBeatmapReader
         public List<int> Circle_Time;
 
         public List<int> TimingPoint_Time;
-        public List<decimal> TimingPoint_Bpm;
+        public List<float> TimingPoint_Bpm;
         public List<int> InheritedPoint_Time;
-        public List<decimal> InheritedPoint_Multiplier;
+        public List<float> InheritedPoint_Multiplier;
 
         // Sliders are not supported yet.
 
@@ -75,7 +75,7 @@ namespace OsuBeatmapReader
         public void GetBeatmapData(string path)
         {
             #region ClearListCheck
-   
+
             if (Circle_PosX == null)
             {
             }
@@ -129,10 +129,11 @@ namespace OsuBeatmapReader
             {
                 InheritedPoint_Multiplier.Clear();
             }
-            #endregion
+
+            #endregion ClearListCheck
 
             BackgroundFileName = "";
-          
+
             RAW_Data = "";
             OsuFileFormat = -1;
             AudioFileName = "";
@@ -156,274 +157,303 @@ namespace OsuBeatmapReader
             SliderTickrate = -1;
 
             string bmpath = path;
-            try
+
+            FileStream fs = new FileStream(bmpath, FileMode.Open);
+            StreamReader streamReader = new StreamReader(fs);
+
+            bool GeneralTag = false;
+            bool MetaDataTag = false;
+            bool DifficultyTag = false;
+            bool EventsTag = false;
+            bool TimingPointsTag = false;
+            bool HitObjectsTag = false;
+            Console.WriteLine("Reading Started.");
+           // try { 
+            while (streamReader.Peek() != -1)
             {
-                FileStream fs = new FileStream(bmpath, FileMode.Open);
-                StreamReader streamReader = new StreamReader(fs);
+                string str = streamReader.ReadLine();
 
-                bool GeneralTag= false;
-                bool MetaDataTag = false;
-                bool DifficultyTag = false;
-                bool EventsTag = false;
-                bool TimingPointsTag = false;
-                bool HitObjectsTag = false;
-
-                while (streamReader.Peek() != -1)
+                if (str.StartsWith("//"))
                 {
-                    string str = streamReader.ReadLine();
-
-                    if (str.StartsWith("//"))
+                    Console.WriteLine("Command found: " + str);
+                    //Skip Line
+                }
+                else
+                {
+                    if ((GeneralTag == false) && (MetaDataTag == false) && (DifficultyTag == false) && (EventsTag == false) && (TimingPointsTag == false) && (HitObjectsTag == false))
                     {
-                        //Skip Line
+                        if (str.StartsWith("osu file format v"))
+                        {
+                            OsuFileFormat = Convert.ToInt32(str.Replace("osu file format v", ""));
+                            Console.WriteLine("osu! file format v" + OsuFileFormat);
+                        }
                     }
-                    else
+
+                    if (str.Equals("[General]"))
                     {
-                        if ((GeneralTag == false) && (MetaDataTag == false) && (DifficultyTag == false) && (EventsTag == false) && (TimingPointsTag == false) && (HitObjectsTag == false))
+                        GeneralTag = true;
+                        Console.WriteLine("General Section");
+                    }
+                    if (str.Equals("[Metadata]"))
+                    {
+                        GeneralTag = false;
+                        MetaDataTag = true;
+                        Console.WriteLine("Metadata Section");
+                    }
+                    if (str.Equals("[Difficulty]"))
+                    {
+                        Console.WriteLine("Difficulty Section");
+                        MetaDataTag = false;
+                        DifficultyTag = true;
+                    }
+
+                    if (str.Equals("[Events]"))
+                    {
+                        Console.WriteLine("Event Section");
+                        DifficultyTag = false;
+                        EventsTag = true;
+                    }
+
+                    if (str.Equals("[TimingPoints]"))
+                    {
+                        Console.WriteLine("TimingPoints Section");
+                        EventsTag = false;
+                        TimingPointsTag = true;
+                    }
+
+                    if (str.Equals("[HitObjects]"))
+                    {
+                        Console.WriteLine("HitObjects Section");
+                        TimingPointsTag = false;
+                        HitObjectsTag = true;
+                    }
+                    if (GeneralTag)
+                    {
+                        if (str.StartsWith("AudioFilename: "))
                         {
-                            if (str.StartsWith("osu file format v"))
-                            {
-                                OsuFileFormat = Convert.ToInt32(str.Replace("osu file format v", ""));
-                            }
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            AudioFileName = Convert.ToString(str.Replace("AudioFilename: ", ""));
+                            AudioFilePath = bmpath + "\\" + AudioFileName;
+                            Console.WriteLine("Audio Filename: " + AudioFileName + Environment.NewLine + AudioFilePath);
                         }
 
-                        if (str.Equals("[General]"))
+                        if (str.StartsWith("PreviewTime: "))
                         {
-                            GeneralTag = true;
-                        }
-                        if (str.Equals("[Metadata]"))
-                        {
-                            GeneralTag = false;
-                            MetaDataTag = true;
-                        }
-                        if (str.Equals("[Difficulty]"))
-                        {
-                            MetaDataTag = false;
-                            DifficultyTag = true;
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            AudioPreviewTime = Convert.ToInt32(str.Replace("PreviewTime: ", ""));
+                            Console.WriteLine("PreviewTime: " + AudioPreviewTime);
                         }
 
-                        if (str.Equals("[Events]"))
+                        if (str.StartsWith("Mode: "))
                         {
-                            DifficultyTag = false;
-                            EventsTag = true;
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            GameMode = Convert.ToInt32(str.Replace("Mode:", ""));
+                            Console.WriteLine("GameMode: " + GameMode);
                         }
+                    }
 
-                        if (str.Equals("[TimingPoints]"))
+                    if (MetaDataTag)
+                    {
+                        if (str.StartsWith("Title:"))
                         {
-                            EventsTag = false;
-                            TimingPointsTag = true;
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            Title = Convert.ToString(str.Replace("Title:", ""));
+                            Console.WriteLine("Title: " + Title);
                         }
-
-                        if (str.Equals("[HitObjects]"))
+                        if (str.StartsWith("TitleUnicode:"))
                         {
-                            TimingPointsTag = false;
-                            HitObjectsTag = true;
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            TitleUnicode = Convert.ToString(str.Replace("TitleUnicode:", ""));
+                            Console.WriteLine("TitleU: " + TitleUnicode);
                         }
-                        if (GeneralTag)
+                        if (str.StartsWith("Artist:"))
                         {
-                            if (str.StartsWith("AudioFilename:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                AudioFileName = Convert.ToString(str.Replace("AudioFilename: ", ""));
-                                AudioFilePath = bmpath + "\\" + AudioFileName;
-                            }
-
-                            if (str.StartsWith("PreviewTime:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                AudioPreviewTime = Convert.ToInt32(str.Replace("AudioFilename:", ""));
-                            }
-
-                            if (str.StartsWith("Mode:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                GameMode = Convert.ToInt32(str.Replace("Mode:", ""));
-                            }
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            Artist = Convert.ToString(str.Replace("Artist:", ""));
+                            Console.WriteLine("Artist: " + Artist);
                         }
-
-                        if (MetaDataTag)
+                        if (str.StartsWith("ArtistUnicde:"))
                         {
-                            if (str.StartsWith("Title:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                Title = Convert.ToString(str.Replace("Title:", ""));
-                            }
-                            if (str.StartsWith("TitleUnicode:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                TitleUnicode = Convert.ToString(str.Replace("TitleUnicode:", ""));
-                            }
-                            if (str.StartsWith("Artist:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                Artist = Convert.ToString(str.Replace("Artist:", ""));
-                            }
-                            if (str.StartsWith("ArtistUnicde:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                ArtistUnicde = Convert.ToString(str.Replace("ArtistUnicde:", ""));
-                            }
-                            if (str.StartsWith("Creator:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                Creator = Convert.ToString(str.Replace("Creator:", ""));
-                            }
-                            if (str.StartsWith("Version:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                Version = Convert.ToString(str.Replace("Version:", ""));
-                            }
-                            if (str.StartsWith("Source:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                Source = Convert.ToString(str.Replace("Source:", ""));
-                            }
-                            if (str.StartsWith("Tags:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                Tags = Convert.ToString(str.Replace("Tags:", ""));
-                            }
-                            if (str.StartsWith("BeatmapID:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                BeatmapID = Convert.ToInt32(str.Replace("BeatmapID:", ""));
-                            }
-                            if (str.StartsWith("BeatmapSetID:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                BeatmapSetID = Convert.ToInt32(str.Replace("BeatmapSetID:", ""));
-                            }
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            ArtistUnicde = Convert.ToString(str.Replace("ArtistUnicde:", ""));
+                            Console.WriteLine("ArtistU: " + ArtistUnicde);
                         }
-
-                        if (DifficultyTag)
+                        if (str.StartsWith("Creator:"))
                         {
-                            if (str.StartsWith("HPDrainRate:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                HP = Convert.ToSingle(str.Replace("HPDrainRate:", ""));
-                            }
-                            if (str.StartsWith("CircleSize:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                CS = Convert.ToSingle(str.Replace("CircleSize:", ""));
-                            }
-                            if (str.StartsWith("OverallDifficulty:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                OD = Convert.ToSingle(str.Replace("OverallDifficulty:", ""));
-                            }
-                            if (str.StartsWith("ApproachRate:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                AR = Convert.ToSingle(str.Replace("ApproachRate:", ""));
-                            }
-                            if (str.StartsWith("SliderMultiplier:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                SliderMultiplier = Convert.ToSingle(str.Replace("SliderMultiplier:", ""));
-                            }
-                            if (str.StartsWith("SliderTickRate:"))
-                            {
-                                RAW_Data = RAW_Data + str + Environment.NewLine;
-                                SliderTickrate = Convert.ToSingle(str.Replace("SliderTickRate:", ""));
-                            }
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            Creator = Convert.ToString(str.Replace("Creator:", ""));
+                            Console.WriteLine("Creator: " + Creator);
                         }
-                        if (EventsTag)
+                        if (str.StartsWith("Version:"))
                         {
-                            string[] strArray = str.Split(',');
-                            for (int index = 0; index < strArray.Length; ++index)
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            Version = Convert.ToString(str.Replace("Version:", ""));
+                            Console.WriteLine("Version: " + Version);
+                        }
+                        if (str.StartsWith("Source:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            Source = Convert.ToString(str.Replace("Source:", ""));
+                            Console.WriteLine("Source: " + Source);
+                        }
+                        if (str.StartsWith("Tags:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            Tags = Convert.ToString(str.Replace("Tags:", ""));
+                            Console.WriteLine("Tags: " + Tags);
+                        }
+                        if (str.StartsWith("BeatmapID:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            BeatmapID = Convert.ToInt32(str.Replace("BeatmapID:", ""));
+                            Console.WriteLine("BeatmapID: " + BeatmapID);
+                        }
+                        if (str.StartsWith("BeatmapSetID:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            BeatmapSetID = Convert.ToInt32(str.Replace("BeatmapSetID:", ""));
+                            Console.WriteLine("BeatMapSetID: " + BeatmapSetID);
+                        }
+                    }
+
+                    if (DifficultyTag)
+                    {
+                        if (str.StartsWith("HPDrainRate:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            HP = Convert.ToSingle(str.Replace("HPDrainRate:", ""));
+                            Console.WriteLine("HP: " + HP);
+                        }
+                        if (str.StartsWith("CircleSize:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            CS = Convert.ToSingle(str.Replace("CircleSize:", ""));
+                            Console.WriteLine("CS: " + CS);
+                        }
+                        if (str.StartsWith("OverallDifficulty:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            OD = Convert.ToSingle(str.Replace("OverallDifficulty:", ""));
+                            Console.WriteLine("OD: " + OD);
+                        }
+                        if (str.StartsWith("ApproachRate:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            AR = Convert.ToSingle(str.Replace("ApproachRate:", ""));
+                            Console.WriteLine("AR: " + AR);
+                        }
+                        if (str.StartsWith("SliderMultiplier:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            SliderMultiplier = Convert.ToSingle(str.Replace("SliderMultiplier:", ""));
+                            Console.WriteLine("SliderMultiplier: " + SliderMultiplier);
+                        }
+                        if (str.StartsWith("SliderTickRate:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            SliderTickrate = Convert.ToSingle(str.Replace("SliderTickRate:", ""));
+                            Console.WriteLine("SliderTickRate: " + SliderTickrate);
+                        }
+                    }
+                    if (EventsTag)
+                    {
+                        string[] strArray = str.Split(',');
+                        for (int index = 0; index < strArray.Length; ++index)
+                        {
+                            if (index == 2)
                             {
-                                if (index == 2)
+                                char checkForFile = '"';
+                                if ((strArray[index].StartsWith("" + checkForFile)) && (strArray[index].EndsWith("" + checkForFile)))
                                 {
-                                    char checkForFile = '"';
-                                    if ((strArray[index].StartsWith("" + checkForFile)) && (strArray[index].EndsWith("" + checkForFile)))
-                                    {
-                                        BackgroundFilePath = bmpath + "\\" + strArray[index];
-                                        BackgroundFileName = strArray[index];
-                                        EventsTag = false;
-                                        TimingPointsTag = true;
-                                    }
-                                    
+                                    BackgroundFilePath = bmpath + "\\" + strArray[index];
+                                    BackgroundFileName = strArray[index];
+                                    Console.WriteLine("BG: " + BackgroundFileName);
+                                    EventsTag = false;
+                                    TimingPointsTag = true;
                                 }
                             }
                         }
-                        if (TimingPointsTag)
-                        {
-                         
-
-                            string[] strArray = str.Split(',');
-                            for (int index = 0; index < strArray.Length; ++index)
+                    }
+                    if (TimingPointsTag)
+                    {
+                        string[] strArray = str.Split(',');
+                        for (int index = 0; index < strArray.Length; ++index)
                             {
-                                string Time="", BeatLength="", Uninherited="";
-                                if (index == 0)
-                                {
-                                   Time = strArray[index];
-                                }
-                                if (index == 1)
-                                {
-                                    BeatLength = strArray[index];
-                                }
-                                if (index == 6)
-                                {
-                                    Uninherited = strArray[index];
-                                }
-
-                                if (Uninherited == "0")
-                                {
-                                    TimingPoint_Time.Add(Convert.ToInt32(Time));
-                                    TimingPoint_Bpm.Add(Convert.ToInt32(((1/Convert.ToDecimal(BeatLength))*1000)*60));
-                                }
-                                else
-                                {
-                                    if(Uninherited == "1")
-                                    {
-                                        InheritedPoint_Time.Add(Convert.ToInt32(Time));
-                                        InheritedPoint_Multiplier.Add(Convert.ToDecimal( 100/Convert.ToDecimal(BeatLength.Replace("-",""))));
-                                    }
-                                }
-
+                      
+                                int Time = 0, Uninherited = 0;
+                            float BeatLength = 0;
+                            if (index == 0)
+                            {
+                                Time = Convert.ToInt32(strArray[index]);
+                            }
+                            if (index == 1)
+                            {
+                                BeatLength = Convert.ToSingle(strArray[index]);
+                            }
+                            if (index == 6)
+                            {
+                                Uninherited = Convert.ToInt32(strArray[index]);
                             }
 
-                        }
-
-                        if (HitObjectsTag)
-                        {
-                            if (str.Contains("|"))
+                            if (Uninherited == 0)
                             {
+                                Console.WriteLine(Time);
+                                TimingPoint_Time.Add(Time);
+
+                                TimingPoint_Bpm.Add(((BeatLength * 1000) * 60) / 1);
                             }
                             else
                             {
-                                string[] strArray = str.Split(',');
-                                for (int index = 0; index < strArray.Length; ++index)
+                                if (Uninherited == 1)
                                 {
-                                    if (index == 0)
-                                    {
-                                        Circle_PosX.Add(Convert.ToInt32(strArray[index]));
-                                    }
+                                    InheritedPoint_Time.Add(Time);
+                                    InheritedPoint_Multiplier.Add(100 / (BeatLength * -1));
+                                }
+                            }
+                        }
+                    }
 
-                                    if (index == 1)
-                                    {
-                                        Circle_PosY.Add(Convert.ToInt32(strArray[index]));
-                                    }
-                                    if (index == 2)
-                                    {
-                                        Circle_Time.Add(Convert.ToInt32(strArray[index]));
-                                    }
+                    if (HitObjectsTag)
+                    {
+                        if (str.Contains("|"))
+                        {
+                        }
+                        else
+                        {
+                            string[] strArray = str.Split(',');
+                            for (int index = 0; index < strArray.Length; ++index)
+                            {
+                                if (index == 0)
+                                {
+                                    Circle_PosX.Add(Convert.ToInt32(strArray[index]));
+                                }
+
+                                if (index == 1)
+                                {
+                                    Circle_PosY.Add(Convert.ToInt32(strArray[index]));
+                                }
+                                if (index == 2)
+                                {
+                                    Circle_Time.Add(Convert.ToInt32(strArray[index]));
                                 }
                             }
                         }
                     }
                 }
-                streamReader.Close();
-                fs.Close();
-                if (GameMode == -1)
-                {
-                    GameMode = 0;
-                }
             }
-            catch (Exception ex)
+            streamReader.Close();
+            fs.Close();
+            if (GameMode == -1)
             {
-                this.Error = ex.Message + Environment.NewLine + ex.InnerException + Environment.NewLine + ex.Source;
+                GameMode = 0;
             }
+             /*}
+             catch (Exception ex)
+             {
+
+                 Error = ex.Message + Environment.NewLine + ex.InnerException + Environment.NewLine + ex.Source;
+              
+             }*/
         }
     }
 }
