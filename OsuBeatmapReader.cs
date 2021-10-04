@@ -57,7 +57,7 @@ namespace OsuBeatmapReader
         public float SliderTickrate;
 
         #endregion Difficulty
-
+        private bool gotBG = false;
         public List<int> Circle_PosX;
         public List<int> Circle_PosY;
         public List<int> Circle_Time;
@@ -66,6 +66,18 @@ namespace OsuBeatmapReader
         public List<float> TimingPoint_Bpm;
         public List<int> InheritedPoint_Time;
         public List<float> InheritedPoint_Multiplier;
+
+        public OsuBeatmapReader()
+        {
+            Circle_PosX = new List<Int32>();
+            Circle_PosY = new List<Int32>();
+            Circle_Time = new List<Int32>();
+
+            TimingPoint_Time = new List<Int32>();
+            TimingPoint_Bpm = new List<float>();
+            InheritedPoint_Time = new List<Int32>();
+            InheritedPoint_Multiplier = new List<float>();
+        }
 
         // Sliders are not supported yet.
 
@@ -133,10 +145,11 @@ namespace OsuBeatmapReader
             #endregion ClearListCheck
 
             BackgroundFileName = "";
-
+            BackgroundFilePath = "";
             RAW_Data = "";
             OsuFileFormat = -1;
             AudioFileName = "";
+            AudioFilePath = "";
             AudioPreviewTime = -1;
             GameMode = -1;
             Title = "";
@@ -167,13 +180,14 @@ namespace OsuBeatmapReader
             bool EventsTag = false;
             bool TimingPointsTag = false;
             bool HitObjectsTag = false;
+            bool ColoursTag = false;
             Console.WriteLine("Reading Started.");
-           // try { 
+            // try {
             while (streamReader.Peek() != -1)
             {
                 string str = streamReader.ReadLine();
-
-                if (str.StartsWith("//"))
+                Console.WriteLine(str);
+                if (str.StartsWith("//") || str.Equals(""))
                 {
                     Console.WriteLine("Command found: " + str);
                     //Skip Line
@@ -219,36 +233,198 @@ namespace OsuBeatmapReader
                         Console.WriteLine("TimingPoints Section");
                         EventsTag = false;
                         TimingPointsTag = true;
+                        
                     }
+
+                    if (str.Equals("[Colours]"))
+                    {
+                        Console.WriteLine("Colours Section");
+                        TimingPointsTag = false;
+                        ColoursTag = true;
+
+                    }
+
 
                     if (str.Equals("[HitObjects]"))
                     {
                         Console.WriteLine("HitObjects Section");
+                        ColoursTag = false;
                         TimingPointsTag = false;
                         HitObjectsTag = true;
                     }
-                    if (GeneralTag)
+                    
+
+                   
+
+                  
+                    if (HitObjectsTag)
                     {
-                        if (str.StartsWith("AudioFilename: "))
+                        if (str.Equals("[HitObjects]"))
                         {
-                            RAW_Data = RAW_Data + str + Environment.NewLine;
-                            AudioFileName = Convert.ToString(str.Replace("AudioFilename: ", ""));
-                            AudioFilePath = bmpath + "\\" + AudioFileName;
-                            Console.WriteLine("Audio Filename: " + AudioFileName + Environment.NewLine + AudioFilePath);
                         }
-
-                        if (str.StartsWith("PreviewTime: "))
+                        else
                         {
-                            RAW_Data = RAW_Data + str + Environment.NewLine;
-                            AudioPreviewTime = Convert.ToInt32(str.Replace("PreviewTime: ", ""));
-                            Console.WriteLine("PreviewTime: " + AudioPreviewTime);
+
+                        
+
+                            if (str.Contains("|"))
+                            {
+                                //READING SLIDERS AS CIRCLES FOR NOW
+                                string[] strArray = str.Split(',');
+                                for (int index = 0; index < strArray.Length; ++index)
+                                {
+                                    if (index == 0)
+                                    {
+                                        Circle_PosX.Add(Convert.ToInt32(strArray[index]));
+                                    }
+
+                                    if (index == 1)
+                                    {
+                                        Circle_PosY.Add(Convert.ToInt32(strArray[index]));
+                                    }
+                                    if (index == 2)
+                                    {
+                                        Circle_Time.Add(Convert.ToInt32(strArray[index]));
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                string[] strArray = str.Split(',');
+                                for (int index = 0; index < strArray.Length; ++index)
+                                {
+                                    if (index == 0)
+                                    {
+                                        Circle_PosX.Add(Convert.ToInt32(strArray[index]));
+                                    }
+
+                                    if (index == 1)
+                                    {
+                                        Circle_PosY.Add(Convert.ToInt32(strArray[index]));
+                                    }
+                                    if (index == 2)
+                                    {
+                                        Circle_Time.Add(Convert.ToInt32(strArray[index]));
+                                    }
+                                }
+                            }
                         }
+                    }
 
-                        if (str.StartsWith("Mode: "))
+                    if (ColoursTag)
+                    {
+                        //IGNORE
+                    }
+
+                    if (TimingPointsTag)
+                    {
+                        if (str.Equals("[TimingPoints]"))
+                        {
+
+                        }
+                        else
+                        {
+
+
+                            string[] strArray = str.Split(',');
+                            for (int index = 0; index < strArray.Length; ++index)
+                            {
+                                int Time = 0, Uninherited = 0;
+                                float BeatLength = 0;
+                                if (index == 0)
+                                {
+
+
+
+                                    Time = int.Parse(strArray[index]);
+                                }
+                                if (index == 1)
+                                {
+                                    BeatLength = Convert.ToSingle(strArray[index]);
+                                }
+                                if (index == 6)
+                                {
+                                    Uninherited = Convert.ToInt32(strArray[index]);
+                                }
+
+                                if (Uninherited == 0)
+                                {
+                                    Console.WriteLine(Time);
+                                    TimingPoint_Time.Add(Time);
+
+                                    TimingPoint_Bpm.Add(((BeatLength * 1000) * 60) / 1);
+                                }
+                                else
+                                {
+                                    if (Uninherited == 1)
+                                    {
+                                        InheritedPoint_Time.Add(Time);
+                                        InheritedPoint_Multiplier.Add(100 / (BeatLength * -1));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (EventsTag)
+                    {
+
+                        string[] strArray = str.Split(',');
+                        if (gotBG == false)
+                        {
+                            if (str.StartsWith("0,0,") && str.EndsWith(",0,0"))
+                            {
+                                for (int index = 0; index < strArray.Length; ++index)
+                                {
+                                    if (index == 2)
+                                    {
+                                        BackgroundFilePath = Path.GetDirectoryName(bmpath) + "\\" + strArray[index];
+                                        BackgroundFileName = strArray[index].Replace("/", "").Replace("\"","");
+                                        Console.WriteLine("BG: " + BackgroundFileName);
+                                        gotBG = true;
+                                    }
+                                }
+                            }
+                        }
+                        
+                    }
+                    if (DifficultyTag)
+                    {
+                        if (str.StartsWith("HPDrainRate:"))
                         {
                             RAW_Data = RAW_Data + str + Environment.NewLine;
-                            GameMode = Convert.ToInt32(str.Replace("Mode:", ""));
-                            Console.WriteLine("GameMode: " + GameMode);
+                            HP = Convert.ToSingle(str.Replace("HPDrainRate:", ""));
+                            Console.WriteLine("HP: " + HP);
+                        }
+                        if (str.StartsWith("CircleSize:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            CS = Convert.ToSingle(str.Replace("CircleSize:", ""));
+                            Console.WriteLine("CS: " + CS);
+                        }
+                        if (str.StartsWith("OverallDifficulty:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            OD = Convert.ToSingle(str.Replace("OverallDifficulty:", ""));
+                            Console.WriteLine("OD: " + OD);
+                        }
+                        if (str.StartsWith("ApproachRate:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            AR = Convert.ToSingle(str.Replace("ApproachRate:", ""));
+                            Console.WriteLine("AR: " + AR);
+                        }
+                        if (str.StartsWith("SliderMultiplier:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            SliderMultiplier = Convert.ToSingle(str.Replace("SliderMultiplier:", ""));
+                            Console.WriteLine("SliderMultiplier: " + SliderMultiplier);
+                        }
+                        if (str.StartsWith("SliderTickRate:"))
+                        {
+                            RAW_Data = RAW_Data + str + Environment.NewLine;
+                            SliderTickrate = Convert.ToSingle(str.Replace("SliderTickRate:", ""));
+                            Console.WriteLine("SliderTickRate: " + SliderTickrate);
                         }
                     }
 
@@ -315,130 +491,32 @@ namespace OsuBeatmapReader
                             Console.WriteLine("BeatMapSetID: " + BeatmapSetID);
                         }
                     }
-
-                    if (DifficultyTag)
+                    if (GeneralTag)
                     {
-                        if (str.StartsWith("HPDrainRate:"))
+                        if (str.StartsWith("AudioFilename: "))
                         {
                             RAW_Data = RAW_Data + str + Environment.NewLine;
-                            HP = Convert.ToSingle(str.Replace("HPDrainRate:", ""));
-                            Console.WriteLine("HP: " + HP);
+                            AudioFileName = Convert.ToString(str.Replace("AudioFilename: ", ""));
+                            AudioFilePath = bmpath + "\\" + AudioFileName;
+                            Console.WriteLine("Audio Filename: " + AudioFileName + Environment.NewLine + AudioFilePath);
                         }
-                        if (str.StartsWith("CircleSize:"))
+
+                        if (str.StartsWith("PreviewTime: "))
                         {
                             RAW_Data = RAW_Data + str + Environment.NewLine;
-                            CS = Convert.ToSingle(str.Replace("CircleSize:", ""));
-                            Console.WriteLine("CS: " + CS);
+                            AudioPreviewTime = Convert.ToInt32(str.Replace("PreviewTime: ", ""));
+                            Console.WriteLine("PreviewTime: " + AudioPreviewTime);
                         }
-                        if (str.StartsWith("OverallDifficulty:"))
+
+                        if (str.StartsWith("Mode: "))
                         {
                             RAW_Data = RAW_Data + str + Environment.NewLine;
-                            OD = Convert.ToSingle(str.Replace("OverallDifficulty:", ""));
-                            Console.WriteLine("OD: " + OD);
-                        }
-                        if (str.StartsWith("ApproachRate:"))
-                        {
-                            RAW_Data = RAW_Data + str + Environment.NewLine;
-                            AR = Convert.ToSingle(str.Replace("ApproachRate:", ""));
-                            Console.WriteLine("AR: " + AR);
-                        }
-                        if (str.StartsWith("SliderMultiplier:"))
-                        {
-                            RAW_Data = RAW_Data + str + Environment.NewLine;
-                            SliderMultiplier = Convert.ToSingle(str.Replace("SliderMultiplier:", ""));
-                            Console.WriteLine("SliderMultiplier: " + SliderMultiplier);
-                        }
-                        if (str.StartsWith("SliderTickRate:"))
-                        {
-                            RAW_Data = RAW_Data + str + Environment.NewLine;
-                            SliderTickrate = Convert.ToSingle(str.Replace("SliderTickRate:", ""));
-                            Console.WriteLine("SliderTickRate: " + SliderTickrate);
+                            GameMode = Convert.ToInt32(str.Replace("Mode:", ""));
+                            Console.WriteLine("GameMode: " + GameMode);
                         }
                     }
-                    if (EventsTag)
-                    {
-                        string[] strArray = str.Split(',');
-                        for (int index = 0; index < strArray.Length; ++index)
-                        {
-                            if (index == 2)
-                            {
-                                char checkForFile = '"';
-                                if ((strArray[index].StartsWith("" + checkForFile)) && (strArray[index].EndsWith("" + checkForFile)))
-                                {
-                                    BackgroundFilePath = bmpath + "\\" + strArray[index];
-                                    BackgroundFileName = strArray[index];
-                                    Console.WriteLine("BG: " + BackgroundFileName);
-                                    EventsTag = false;
-                                    TimingPointsTag = true;
-                                }
-                            }
-                        }
-                    }
-                    if (TimingPointsTag)
-                    {
-                        string[] strArray = str.Split(',');
-                        for (int index = 0; index < strArray.Length; ++index)
-                            {
-                      
-                                int Time = 0, Uninherited = 0;
-                            float BeatLength = 0;
-                            if (index == 0)
-                            {
-                                Time = Convert.ToInt32(strArray[index]);
-                            }
-                            if (index == 1)
-                            {
-                                BeatLength = Convert.ToSingle(strArray[index]);
-                            }
-                            if (index == 6)
-                            {
-                                Uninherited = Convert.ToInt32(strArray[index]);
-                            }
+                    
 
-                            if (Uninherited == 0)
-                            {
-                                Console.WriteLine(Time);
-                                TimingPoint_Time.Add(Time);
-
-                                TimingPoint_Bpm.Add(((BeatLength * 1000) * 60) / 1);
-                            }
-                            else
-                            {
-                                if (Uninherited == 1)
-                                {
-                                    InheritedPoint_Time.Add(Time);
-                                    InheritedPoint_Multiplier.Add(100 / (BeatLength * -1));
-                                }
-                            }
-                        }
-                    }
-
-                    if (HitObjectsTag)
-                    {
-                        if (str.Contains("|"))
-                        {
-                        }
-                        else
-                        {
-                            string[] strArray = str.Split(',');
-                            for (int index = 0; index < strArray.Length; ++index)
-                            {
-                                if (index == 0)
-                                {
-                                    Circle_PosX.Add(Convert.ToInt32(strArray[index]));
-                                }
-
-                                if (index == 1)
-                                {
-                                    Circle_PosY.Add(Convert.ToInt32(strArray[index]));
-                                }
-                                if (index == 2)
-                                {
-                                    Circle_Time.Add(Convert.ToInt32(strArray[index]));
-                                }
-                            }
-                        }
-                    }
                 }
             }
             streamReader.Close();
@@ -447,13 +525,11 @@ namespace OsuBeatmapReader
             {
                 GameMode = 0;
             }
-             /*}
-             catch (Exception ex)
-             {
-
-                 Error = ex.Message + Environment.NewLine + ex.InnerException + Environment.NewLine + ex.Source;
-              
-             }*/
+            /*}
+            catch (Exception ex)
+            {
+                Error = ex.Message + Environment.NewLine + ex.InnerException + Environment.NewLine + ex.Source;
+            }*/
         }
     }
 }
