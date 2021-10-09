@@ -552,7 +552,7 @@ namespace OsuBeatmapReader
                         {
                             RAW_Data = RAW_Data + str + Environment.NewLine;
                             AudioFileName = Convert.ToString(str.Replace("AudioFilename: ", ""));
-                            AudioFilePath = bmpath + "\\" + AudioFileName;
+                            AudioFilePath = Path.GetDirectoryName(bmpath) + "\\" + AudioFileName;
                             Console.WriteLine("Audio Filename: " + AudioFileName + Environment.NewLine + AudioFilePath);
                         }
 
