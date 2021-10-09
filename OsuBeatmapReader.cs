@@ -392,7 +392,10 @@ namespace OsuBeatmapReader
 
                                 string temp;
                                 temp = str.Replace("0,0,\"", "");
-                                temp = temp.Replace("\",0,0", "");
+
+                                if (temp.Contains("\",0,0")){
+                                    temp = temp.Replace("\",0,0", "");
+                                }
 
 
 
