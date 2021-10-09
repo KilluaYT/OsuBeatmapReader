@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
+using System.Drawing;
 
 namespace OsuBeatmapReader
 {
@@ -63,6 +64,7 @@ namespace OsuBeatmapReader
         public List<int> Circle_Time;
 
         public List<int> TimingPoint_Time;
+        public List<int> TimingPoint_Meter;
         public List<float> TimingPoint_Bpm;
         public List<int> InheritedPoint_Time;
         public List<float> InheritedPoint_Multiplier;
@@ -74,6 +76,7 @@ namespace OsuBeatmapReader
             Circle_Time = new List<Int32>();
 
             TimingPoint_Time = new List<Int32>();
+            TimingPoint_Meter = new List<Int32>();
             TimingPoint_Bpm = new List<float>();
             InheritedPoint_Time = new List<Int32>();
             InheritedPoint_Multiplier = new List<float>();
@@ -118,6 +121,13 @@ namespace OsuBeatmapReader
             else
             {
                 TimingPoint_Time.Clear();
+            }
+            if (TimingPoint_Meter == null)
+            {
+            }
+            else
+            {
+                TimingPoint_Meter.Clear();
             }
 
             if (TimingPoint_Bpm == null)
@@ -329,7 +339,7 @@ namespace OsuBeatmapReader
                             string[] strArray = str.Split(',');
                             for (int index = 0; index < strArray.Length; ++index)
                             {
-                                int Time = 0, Uninherited = 0;
+                                int Time = 0, Uninherited = 0, Meter=4;
                                 float BeatLength = 0;
                                 if (index == 0)
                                 {
@@ -342,6 +352,11 @@ namespace OsuBeatmapReader
                                 {
                                     BeatLength = Convert.ToSingle(strArray[index]);
                                 }
+                                if (index == 2)
+                                {
+                                    Meter = int.Parse(strArray[index]);
+                                }
+
                                 if (index == 6)
                                 {
                                     Uninherited = Convert.ToInt32(strArray[index]);
@@ -351,7 +366,7 @@ namespace OsuBeatmapReader
                                 {
                                     Console.WriteLine(Time);
                                     TimingPoint_Time.Add(Time);
-
+                                    TimingPoint_Meter.Add(Meter);
                                     TimingPoint_Bpm.Add(((BeatLength * 1000) * 60) / 1);
                                 }
                                 else
@@ -372,18 +387,36 @@ namespace OsuBeatmapReader
                         string[] strArray = str.Split(',');
                         if (gotBG == false)
                         {
-                            if (str.StartsWith("0,0,") && str.EndsWith(",0,0"))
+                            if (str.StartsWith("0,0,\""))
                             {
-                                for (int index = 0; index < strArray.Length; ++index)
+
+                                string temp;
+                                temp = str.Replace("0,0,\"", "");
+                                temp = temp.Replace("\",0,0", "");
+
+
+
+
+                                if(File.Exists(Path.GetDirectoryName(bmpath) + "\\" + temp))
                                 {
-                                    if (index == 2)
-                                    {
-                                        BackgroundFilePath = Path.GetDirectoryName(bmpath) + "\\" + strArray[index];
-                                        BackgroundFileName = strArray[index].Replace("/", "").Replace("\"","");
-                                        Console.WriteLine("BG: " + BackgroundFileName);
-                                        gotBG = true;
-                                    }
+                                    BackgroundFilePath = Path.GetDirectoryName(bmpath) + "\\" + temp;
+                                    BackgroundFileName = temp;
+                                    Console.WriteLine("BG: " + BackgroundFileName);
+                                    gotBG = true;
                                 }
+                                else
+                                {
+                               
+                                }
+                               
+                              
+
+
+                               
+                              
+                               
+                                    
+                                
                             }
                         }
                         
