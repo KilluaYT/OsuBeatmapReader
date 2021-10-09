@@ -383,46 +383,65 @@ namespace OsuBeatmapReader
 
                     if (EventsTag)
                     {
-
-                        string[] strArray = str.Split(',');
-                        if (gotBG == false)
+                        if (str.Equals("[Events]"))
                         {
-                            if (str.StartsWith("0,0,\""))
+                        }
+                        else
+                        {
+
+
+
+                            string[] strArray = str.Split('"');
+                            if (gotBG == false)
                             {
 
+                                /*  if (str.StartsWith("0,0,\""))
+                                  {
+
+                                         string temp;
+                                         temp = str.Replace("0,0,\"", "");
+                                         if (temp.Contains("\",0,0")){
+                                             temp = temp.Replace("\",0,0", "");
+                                         }
+                                         if(File.Exists(Path.GetDirectoryName(bmpath) + "\\" + temp))
+                                         {
+                                             BackgroundFilePath = Path.GetDirectoryName(bmpath) + "\\" + temp;
+                                             BackgroundFileName = temp;
+                                             Console.WriteLine("BG: " + BackgroundFileName);
+                                             gotBG = true;
+                                         }
+                                         else
+                                         {                             
+                                         }
+                                     }*/
                                 string temp;
-                                temp = str.Replace("0,0,\"", "");
+                                temp = str;
 
-                                if (temp.Contains("\",0,0")){
-                                    temp = temp.Replace("\",0,0", "");
+                               
+                               if (temp.StartsWith("0,0,\""))
+                               {
+                                    temp = strArray[1];
+                                    if (strArray[1] == null)
+                                    {
+
+                                    }
+                                    else
+                                    {
+                                        if (File.Exists(Path.GetDirectoryName(bmpath) + "\\" + temp))
+                                        {
+                                            BackgroundFilePath = Path.GetDirectoryName(bmpath) + "\\" + temp;
+                                            BackgroundFileName = temp;
+                                            Console.WriteLine("BG: " + BackgroundFileName);
+                                            gotBG = true;
+                                        }
+                                    }
+                                   
                                 }
 
-
-
-
-                                if(File.Exists(Path.GetDirectoryName(bmpath) + "\\" + temp))
-                                {
-                                    BackgroundFilePath = Path.GetDirectoryName(bmpath) + "\\" + temp;
-                                    BackgroundFileName = temp;
-                                    Console.WriteLine("BG: " + BackgroundFileName);
-                                    gotBG = true;
-                                }
-                                else
-                                {
-                               
-                                }
-                               
-                              
-
-
-                               
-                              
-                               
-                                    
                                 
+
                             }
                         }
-                        
                     }
                     if (DifficultyTag)
                     {
