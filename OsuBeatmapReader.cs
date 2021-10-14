@@ -346,7 +346,7 @@ namespace OsuBeatmapReader
 
 
 
-                                    Time = int.Parse(strArray[index]);
+                                   Int32.TryParse(strArray[index], out Time);
                                 }
                                 if (index == 1)
                                 {
@@ -354,12 +354,12 @@ namespace OsuBeatmapReader
                                 }
                                 if (index == 2)
                                 {
-                                    Meter = int.Parse(strArray[index]);
+                                    Int32.TryParse(strArray[index], out Meter);
                                 }
 
                                 if (index == 6)
                                 {
-                                    Uninherited = Convert.ToInt32(strArray[index]);
+                                    Int32.TryParse(strArray[index], out Uninherited);
                                 }
 
                                 if (Uninherited == 0)
